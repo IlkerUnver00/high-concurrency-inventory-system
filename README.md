@@ -4,7 +4,7 @@ Backend case study built with FastAPI and PostgreSQL.
 
 ## Scenario
 
-This project simulates a flash sale event where thousands of users attempt to purchase the same limited-stock product simultaneously.
+This project simulates a flash sale event where many users attempt to purchase the same limited-stock product simultaneously.
 
 The primary objective is to guarantee data consistency and prevent overselling under high concurrency.
 
@@ -54,6 +54,7 @@ PostgreSQL
 * Database migrations with Alembic
 * Automated tests with Pytest
 * Async concurrency validation
+* GitHub Actions CI pipeline
 
 ---
 
@@ -126,7 +127,7 @@ The application is primarily I/O bound because requests spend most of their time
 
 Using AsyncSession allows FastAPI to process more concurrent requests efficiently without blocking worker threads.
 
-Benefits:
+### Benefits
 
 * Better scalability
 * Improved concurrency handling
@@ -136,87 +137,130 @@ Benefits:
 
 ## Running the Project
 
-### Start PostgreSQL
+### Prerequisites
+
+* Docker Desktop (Windows/macOS) or Docker Engine (Linux)
+* Docker Compose
+
+Verify installation:
 
 ```bash
-docker compose up -d db
+docker --version
+docker compose version
 ```
 
-### Run API
+### Clone Repository
 
 ```bash
-uvicorn app.main:app --reload
+git clone https://github.com/IlkerUnver00/high-concurrency-inventory-system.git
+cd high-concurrency-inventory-system
 ```
+
+### Start Application
+
+Build and start all services:
+
+```bash
+docker compose up --build
+```
+
+The application automatically:
+
+* Starts PostgreSQL
+* Waits until the database is healthy
+* Applies Alembic migrations
+* Seeds the initial product
+* Starts the FastAPI application
 
 ### API Documentation
 
+Swagger UI:
+
 ```text
 http://localhost:8000/docs
+```
+
+Health Check:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "healthy"
+}
 ```
 
 ---
 
 ## Running Tests
 
+Open a second terminal while the application is running.
+
 Run all tests:
 
 ```bash
-pytest
+docker compose exec api pytest -v
 ```
 
-Current result:
+Expected result:
 
 ```text
+========================
 4 passed
+========================
 ```
 
 Included tests:
 
-* Root endpoint
-* Health endpoint
-* Basic API functionality
-* High concurrency purchase scenario
+* Root endpoint validation
+* Health endpoint validation
+* API functionality validation
+* High concurrency purchase validation
 
 ---
 
-## Concurrency Test
+## Concurrency Validation
 
-The project includes both:
+The project includes:
 
+* Automated concurrency testing (`tests/test_concurrency.py`)
 * Manual load testing (`load_concurrency.py`)
-* Automated async concurrency testing (`tests/test_concurrency.py`)
 
-Run automated concurrency test:
+### Run Manual Load Test
 
 ```bash
-pytest tests/test_concurrency.py -v
+docker compose exec api python load_concurrency.py
 ```
 
 ### Test Scenario
 
 ```text
-Initial Stock      : 100
-Concurrent Requests: 500
+Initial Stock      : 50
+Concurrent Requests: 100
 ```
 
 ### Expected Result
 
 ```text
-Successful Purchases : 100
-Rejected Purchases   : 400
-Final Stock          : 0
-Created Orders       : 100
-Overselling          : No
-Negative Stock       : No
+Successful purchases: 50
+Failed purchases: 50
 ```
 
-### Example Execution
+### Guaranteed Outcomes
 
 ```text
-tests/test_concurrency.py::test_high_concurrency_purchase PASSED
+Remaining Stock    : 0
+Successful Orders  : 50
+Rejected Requests  : 50
+Overselling        : No
+Negative Stock     : No
 ```
 
-This verifies that the system maintains full data consistency under concurrent load.
+This validates that the system preserves full database consistency under concurrent load.
 
 ---
 
@@ -233,6 +277,19 @@ Apply migration:
 ```bash
 alembic upgrade head
 ```
+
+---
+
+## Continuous Integration
+
+GitHub Actions automatically:
+
+* Starts PostgreSQL
+* Runs Alembic migrations
+* Starts the FastAPI application
+* Executes the test suite
+
+Every push and pull request to the `main` branch triggers the CI pipeline.
 
 ---
 
@@ -255,10 +312,16 @@ tests/
 alembic/
 ├── versions/
 
+.github/
+├── workflows/
+│   └── ci.yml
+
 Dockerfile
 docker-compose.yml
 alembic.ini
 requirements.txt
+load_concurrency.py
+pytest.ini
 README.md
 ```
 
@@ -266,6 +329,13 @@ README.md
 
 ## Key Achievement
 
-The system guarantees stock consistency under high concurrency by using PostgreSQL atomic conditional updates and transactional order creation.
+The system guarantees stock consistency under high concurrency through PostgreSQL atomic conditional updates and transactional order creation.
 
-The implementation was validated through automated concurrency testing with 500 simultaneous purchase requests, successfully preventing overselling while maintaining database consistency.
+The implementation has been validated through:
+
+* Automated test suite (4 passing tests)
+* Concurrent purchase stress testing
+* GitHub Actions CI pipeline
+* Clean Docker-based deployment
+
+The application successfully prevents overselling while maintaining strict database consistency under concurrent load.
