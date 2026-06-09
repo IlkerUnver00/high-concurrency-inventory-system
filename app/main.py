@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.database import AsyncSessionLocal
 from app.models import Item
